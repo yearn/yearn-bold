@@ -1,26 +1,42 @@
 @import "tailwindcss";
 
+/*
+  Palette tuned for Liquity V2 referral traffic: warm paper background,
+  deep navy ink, Liquity action blue for interactive elements, Yearn blue
+  reserved for brand moments.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f6f4;
+  --surface: #ffffff;
+  --ink: #121b44;
+  --muted: #6b6e8f;
+  --line: #e6e6ef;
+  --field: #f2f3fa;
+  --lblue: #405ae5;
+  --lblue-dark: #2d42b8;
+  --yearn: #0657f9;
+  --good: #17836c;
+  --bad: #c2452d;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-field: var(--field);
+  --color-lblue: var(--lblue);
+  --color-lblue-dark: var(--lblue-dark);
+  --color-yearn: var(--yearn);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
