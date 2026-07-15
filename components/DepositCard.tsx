@@ -10,9 +10,11 @@ import {
   useReadContracts,
   useWriteContract,
 } from "wagmi";
-import { BOLD, YBOLD, ST_YBOLD, vaultAbi } from "@/lib/contracts";
+import { BOLD, ST_YBOLD, YBOLD_ZAPPER, zapperAbi } from "@/lib/contracts";
 
 const WAD = 10n ** 18n;
+// zapOut slippage guard, in basis points (matches yearn.fi's default tolerance).
+const MAX_LOSS_BPS = 50n;
 
 function fmt(value: bigint, dp = 2): string {
   const n = Number(formatUnits(value, 18));
@@ -41,10 +43,9 @@ export function DepositCard() {
     contracts: [
       { address: BOLD, abi: erc20Abi, functionName: "balanceOf", args: [address ?? "0x0000000000000000000000000000000000000000"] },
       { address: ST_YBOLD, abi: erc20Abi, functionName: "balanceOf", args: [address ?? "0x0000000000000000000000000000000000000000"] },
-      { address: BOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", YBOLD] },
-      { address: YBOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", ST_YBOLD] },
-      { address: ST_YBOLD, abi: vaultAbi, functionName: "convertToAssets", args: [WAD] },
-      { address: YBOLD, abi: vaultAbi, functionName: "convertToAssets", args: [WAD] },
+      { address: BOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", YBOLD_ZAPPER] },
+      { address: ST_YBOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", YBOLD_ZAPPER] },
+      { address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "previewRedeem", args: [WAD] },
     ],
     query: { enabled: !!address, refetchInterval: 15_000 },
   });
@@ -53,16 +54,14 @@ export function DepositCard() {
     boldBal = 0n,
     stBal = 0n,
     boldAllowance = 0n,
-    yAllowance = 0n,
-    stPps = 0n,
-    yPps = 0n,
+    stAllowance = 0n,
+    sharePriceBold = WAD,
   ] = (reads.data ?? []).map((r) =>
     r.status === "success" ? (r.result as bigint) : 0n,
   );
 
-  // BOLD value of one staked share: st-yBOLD -> yBOLD -> BOLD.
-  const sharePriceBold = ((stPps || WAD) * (yPps || WAD)) / WAD;
-  const positionBold = (stBal * sharePriceBold) / WAD;
+  // BOLD value of the staked position, quoted by the zapper itself.
+  const positionBold = (stBal * (sharePriceBold || WAD)) / WAD;
 
   const amount = (() => {
     try {
@@ -92,55 +91,38 @@ export function DepositCard() {
     reset();
     try {
       if (tab === "deposit") {
-        let step = 1;
-        const total = (boldAllowance < amount ? 1 : 0) + 3;
-        if (boldAllowance < amount) {
-          setStage(`Approving BOLD… (${step++}/${total})`);
+        const needsApproval = boldAllowance < amount;
+        if (needsApproval) {
+          setStage("Approving BOLD… (1/2)");
           const h = await writeContractAsync({
-            address: BOLD, abi: erc20Abi, functionName: "approve", args: [YBOLD, amount],
+            address: BOLD, abi: erc20Abi, functionName: "approve", args: [YBOLD_ZAPPER, amount],
           });
           await publicClient.waitForTransactionReceipt({ hash: h });
         }
-        setStage(`Depositing… (${step++}/${total})`);
-        const dep = await writeContractAsync({
-          address: YBOLD, abi: vaultAbi, functionName: "deposit", args: [amount, address],
+        setStage(needsApproval ? "Depositing… (2/2)" : "Depositing…");
+        const h = await writeContractAsync({
+          address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "zapIn", args: [amount, address],
         });
-        await publicClient.waitForTransactionReceipt({ hash: dep });
-
-        // Stake whatever yBOLD the wallet now holds so it starts earning.
-        const yBal = await publicClient.readContract({
-          address: YBOLD, abi: erc20Abi, functionName: "balanceOf", args: [address],
-        });
-        if (yAllowance < yBal) {
-          setStage(`Enabling auto-earn… (${step++}/${total})`);
-          const h = await writeContractAsync({
-            address: YBOLD, abi: erc20Abi, functionName: "approve", args: [ST_YBOLD, yBal],
-          });
-          await publicClient.waitForTransactionReceipt({ hash: h });
-        }
-        setStage(`Activating… (${step++}/${total})`);
-        const stake = await writeContractAsync({
-          address: ST_YBOLD, abi: vaultAbi, functionName: "deposit", args: [yBal, address],
-        });
-        await publicClient.waitForTransactionReceipt({ hash: stake });
-        setSuccess(`Deposit complete — your BOLD is earning.`);
+        await publicClient.waitForTransactionReceipt({ hash: h });
+        setSuccess("Deposit complete — your BOLD is earning.");
       } else {
-        // Withdraw: unstake st-yBOLD, then redeem yBOLD back to BOLD.
-        const shares = maxed ? stBal : (amount * WAD) / sharePriceBold;
+        const shares = maxed
+          ? stBal
+          : (amount * WAD) / (sharePriceBold || WAD);
         const clamped = shares > stBal ? stBal : shares;
-        setStage("Withdrawing… (1/2)");
-        const un = await writeContractAsync({
-          address: ST_YBOLD, abi: vaultAbi, functionName: "redeem", args: [clamped, address, address],
+        const needsApproval = stAllowance < clamped;
+        if (needsApproval) {
+          setStage("Approving withdrawal… (1/2)");
+          const h = await writeContractAsync({
+            address: ST_YBOLD, abi: erc20Abi, functionName: "approve", args: [YBOLD_ZAPPER, clamped],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: h });
+        }
+        setStage(needsApproval ? "Withdrawing… (2/2)" : "Withdrawing…");
+        const h = await writeContractAsync({
+          address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "zapOut", args: [clamped, address, MAX_LOSS_BPS],
         });
-        await publicClient.waitForTransactionReceipt({ hash: un });
-        const yBal = await publicClient.readContract({
-          address: YBOLD, abi: erc20Abi, functionName: "balanceOf", args: [address],
-        });
-        setStage("Receiving BOLD… (2/2)");
-        const red = await writeContractAsync({
-          address: YBOLD, abi: vaultAbi, functionName: "redeem", args: [yBal, address, address],
-        });
-        await publicClient.waitForTransactionReceipt({ hash: red });
+        await publicClient.waitForTransactionReceipt({ hash: h });
         setSuccess("Withdrawal complete — BOLD is back in your wallet.");
       }
       setInput("");
@@ -206,7 +188,7 @@ export function DepositCard() {
       <div className="mt-3 flex items-center justify-between px-1 text-xs text-muted">
         <span>
           {tab === "deposit"
-            ? "Starts earning immediately — staking is automatic."
+            ? "One transaction — starts earning immediately."
             : "Withdraw anytime. No lockups, no exit fee."}
         </span>
         <Image src="/ybold.png" alt="yBOLD" width={18} height={18} className="rounded-full opacity-80" />
