@@ -19,10 +19,10 @@ export default async function Home() {
         {/* Hero — asymmetric: product story left, deposit box right */}
         <section className="grid items-start gap-12 py-12 min-[900px]:grid-cols-[1.15fr_minmax(0,26rem)] min-[900px]:py-20">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-green px-3 py-1 text-sm font-medium text-navy">
-              <Image src="/bold.png" alt="" width={16} height={16} className="rounded-full" />
-              Powered by BOLD
-            </span>
+            <div className="flex items-center gap-3">
+              <Image src="/ybold.png" alt="" width={56} height={56} className="rounded-full" />
+              <span className="text-2xl font-medium tracking-tight">yBOLD</span>
+            </div>
             <h1 className="mt-5 max-w-xl text-[40px] font-medium leading-[1.08] tracking-tight min-[900px]:text-[56px]">
               Earn BOLD yield automatically across Liquity Stability Pools
             </h1>
@@ -32,8 +32,8 @@ export default async function Home() {
               everything back into BOLD.
             </p>
 
-            {/* Metrics — compact aligned rows, thin dividers, no nested cards */}
-            <div className="mt-10 max-w-lg border-t border-line pt-6">
+            {/* Metrics — compact aligned rows with thin dividers */}
+            <div className="mt-10 max-w-lg rounded-lg border border-line bg-surface p-6">
               {stats ? (
                 <>
                   <div className="flex items-center gap-2 text-sm text-muted">
@@ -96,16 +96,14 @@ export default async function Home() {
           </p>
           <div className="mt-8 grid gap-4 min-[900px]:grid-cols-3">
             <div className="rounded-lg border border-line bg-surface p-7">
-              <div aria-hidden className="size-10 rounded-full bg-yearn" />
-              <h3 className="mt-5 text-xl font-medium">Borrower interest</h3>
+              <h3 className="text-xl font-medium">Borrower interest</h3>
               <p className="mt-2 text-navy/75">
                 Liquity V2 borrowers pay user-set interest rates on their BOLD
                 debt. A share flows continuously to Stability Pool depositors.
               </p>
             </div>
             <div className="rounded-lg bg-yellow p-7">
-              <div aria-hidden className="h-5 w-10 rounded-t-full bg-navy" />
-              <h3 className="mt-5 text-xl font-medium">Trove fees</h3>
+              <h3 className="text-xl font-medium">Trove fees</h3>
               <p className="mt-2 text-navy/75">
                 Upfront fees from new and adjusted Troves are distributed to the
                 Stability Pools. These arrive in variable, sometimes lumpy
@@ -113,8 +111,7 @@ export default async function Home() {
               </p>
             </div>
             <div className="rounded-lg bg-green p-7">
-              <div aria-hidden className="size-10 rounded-md bg-navy" />
-              <h3 className="mt-5 text-xl font-medium">Liquidation gains</h3>
+              <h3 className="text-xl font-medium">Liquidation gains</h3>
               <p className="mt-2 text-navy/75">
                 When Troves are liquidated, pools buy their collateral at a
                 discount. Yearn auctions the WETH, wstETH, and rETH back into
