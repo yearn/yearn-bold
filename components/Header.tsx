@@ -15,7 +15,7 @@ export function Header() {
           rel="noreferrer"
           className="hidden rounded-full border border-navy px-4 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white sm:block"
         >
-          Open in Yearn
+          Open on Yearn.Fi
         </a>
         <ConnectButton showBalance={false} chainStatus="icon" accountStatus="address" />
       </nav>
