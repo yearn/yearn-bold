@@ -19,9 +19,9 @@ export default async function Home() {
         {/* Hero — asymmetric: product story left, deposit box right */}
         <section className="grid items-start gap-12 py-12 min-[900px]:grid-cols-[1.15fr_minmax(0,26rem)] min-[900px]:py-20">
           <div>
-            <div className="flex items-center gap-3">
-              <Image src="/ybold.png" alt="" width={56} height={56} className="rounded-full" />
-              <span className="text-2xl font-medium tracking-tight">yBOLD</span>
+            <div className="flex items-center gap-4">
+              <Image src="/ybold.png" alt="" width={88} height={88} className="rounded-full" />
+              <span className="text-5xl font-medium tracking-tight min-[900px]:text-6xl">yBOLD</span>
             </div>
             <h1 className="mt-5 max-w-xl text-[40px] font-medium leading-[1.08] tracking-tight min-[900px]:text-[56px]">
               Earn BOLD yield automatically across Liquity Stability Pools
