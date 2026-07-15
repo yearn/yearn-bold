@@ -21,7 +21,7 @@ export default async function Home() {
           <div>
             <div className="flex items-center gap-4">
               <Image src="/ybold.png" alt="" width={88} height={88} className="rounded-full" />
-              <span className="text-5xl font-medium tracking-tight min-[900px]:text-6xl">yBOLD</span>
+              <span className="text-5xl font-bold tracking-tight min-[900px]:text-6xl">yBOLD</span>
             </div>
             <h1 className="mt-5 max-w-xl text-[40px] font-medium leading-[1.08] tracking-tight min-[900px]:text-[56px]">
               Earn BOLD yield automatically across Liquity Stability Pools

@@ -156,7 +156,7 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
               reset();
             }}
             className={`flex-1 rounded-full px-4 py-2 text-sm font-medium capitalize transition ${
-              tab === t ? "bg-navy text-white" : "text-muted hover:text-navy"
+              tab === t ? "border border-line bg-surface text-navy" : "text-muted hover:text-navy"
             }`}
           >
             {t}
