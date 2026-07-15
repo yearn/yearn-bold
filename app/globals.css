@@ -1,42 +1,39 @@
 @import "tailwindcss";
 
-/*
-  Palette tuned for Liquity V2 referral traffic: warm paper background,
-  deep navy ink, Liquity action blue for interactive elements, Yearn blue
-  reserved for brand moments.
-*/
+/* Design tokens — see DESIGNSYSTEM.md. Flat, geometric; no gradients or shadows. */
 :root {
-  --background: #f6f6f4;
+  --background: #f2efe9;
   --surface: #ffffff;
-  --ink: #121b44;
-  --muted: #6b6e8f;
-  --line: #e6e6ef;
-  --field: #f2f3fa;
-  --lblue: #405ae5;
-  --lblue-dark: #2d42b8;
-  --yearn: #0657f9;
-  --good: #17836c;
-  --bad: #c2452d;
+  --navy: #111b4d;
+  --yearn-blue: #0657f9;
+  --electric-blue: #405be5;
+  --bold-green: #5fd67c;
+  --yellow: #ffdc37;
+  --muted-text: #858cae;
+  --border: rgba(17, 27, 77, 0.12);
+  /* Darker derivatives for accessible status text on light surfaces. */
+  --good-text: #1d7a4f;
+  --bad-text: #c2452d;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
-  --color-ink: var(--ink);
-  --color-muted: var(--muted);
-  --color-line: var(--line);
-  --color-field: var(--field);
-  --color-lblue: var(--lblue);
-  --color-lblue-dark: var(--lblue-dark);
-  --color-yearn: var(--yearn);
-  --color-good: var(--good);
-  --color-bad: var(--bad);
+  --color-navy: var(--navy);
+  --color-yearn: var(--yearn-blue);
+  --color-electric: var(--electric-blue);
+  --color-green: var(--bold-green);
+  --color-yellow: var(--yellow);
+  --color-muted: var(--muted-text);
+  --color-line: var(--border);
+  --color-good: var(--good-text);
+  --color-bad: var(--bad-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
-  color: var(--ink);
+  color: var(--navy);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }

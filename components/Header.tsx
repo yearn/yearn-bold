@@ -6,28 +6,25 @@ import { YEARN_VAULT_URL } from "@/lib/contracts";
 
 export function Header() {
   return (
-    <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+    <header className="sticky top-4 z-10 mx-auto mt-4 flex w-[calc(100%-2.5rem)] max-w-6xl items-center justify-between rounded-lg border border-line bg-surface px-4 py-2.5">
       <div className="flex items-center gap-3">
-        <Image src="/yearn-symbol.svg" alt="Yearn" width={32} height={32} />
-        <div className="flex items-center gap-2">
-          <Image src="/ybold.png" alt="yBOLD" width={22} height={22} className="rounded-full" />
-          <span className="text-lg font-bold tracking-tight">yBOLD</span>
-          <span className="rounded-full bg-field px-2.5 py-0.5 text-xs font-medium text-muted">
-            by Yearn
-          </span>
-        </div>
+        <Image src="/yearn-symbol.svg" alt="Yearn" width={28} height={28} />
+        <span className="text-lg font-medium tracking-tight">yBOLD</span>
+        <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">
+          by Yearn
+        </span>
       </div>
-      <div className="flex items-center gap-4">
+      <nav className="flex items-center gap-3">
         <a
           href={YEARN_VAULT_URL}
           target="_blank"
           rel="noreferrer"
-          className="hidden text-sm font-medium text-muted transition hover:text-ink sm:block"
+          className="hidden rounded-full border border-navy px-4 py-1.5 text-sm font-medium text-navy transition hover:bg-navy hover:text-white sm:block"
         >
-          Open in Yearn ↗
+          Open in Yearn
         </a>
         <ConnectButton showBalance={false} chainStatus="icon" accountStatus="address" />
-      </div>
+      </nav>
     </header>
   );
 }

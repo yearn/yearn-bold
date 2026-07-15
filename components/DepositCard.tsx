@@ -26,7 +26,7 @@ function fmt(value: bigint, dp = 2): string {
 
 type Tab = "deposit" | "withdraw";
 
-export function DepositCard() {
+export function DepositCard({ apy7d }: { apy7d?: number }) {
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
   const publicClient = usePublicClient();
@@ -74,6 +74,9 @@ export function DepositCard() {
   const busy = stage !== null;
   const balance = tab === "deposit" ? boldBal : positionBold;
   const overBalance = amount > balance && !maxed;
+
+  const inputNum = Number(input) || 0;
+  const estYearly = apy7d ? inputNum * apy7d : 0;
 
   function reset() {
     setError(null);
@@ -139,19 +142,21 @@ export function DepositCard() {
   const disabled = busy || (!!address && (amount === 0n || overBalance));
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-[0_24px_48px_-24px_rgba(18,27,68,0.18)]">
-      <div className="mb-5 flex rounded-full bg-field p-1">
+    <div className="w-full max-w-md rounded-lg border border-line bg-surface p-6">
+      <div className="mb-5 flex rounded-full bg-background p-1" role="tablist">
         {(["deposit", "withdraw"] as const).map((t) => (
           <button
             key={t}
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => {
               setTab(t);
               setInput("");
               setMaxed(false);
               reset();
             }}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold capitalize transition ${
-              tab === t ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
+            className={`flex-1 rounded-full px-4 py-2 text-sm font-medium capitalize transition ${
+              tab === t ? "bg-navy text-white" : "text-muted hover:text-navy"
             }`}
           >
             {t}
@@ -159,16 +164,17 @@ export function DepositCard() {
         ))}
       </div>
 
-      <div className="rounded-2xl bg-field p-4">
-        <div className="flex items-center justify-between text-xs text-muted">
+      <div className="rounded-md bg-background p-4">
+        <div className="flex items-center justify-between text-sm text-muted">
           <span>{tab === "deposit" ? "You deposit" : "You withdraw"}</span>
-          <button onClick={setMax} className="font-semibold text-lblue hover:text-lblue-dark" disabled={!address}>
+          <button onClick={setMax} className="font-medium text-yearn hover:text-electric" disabled={!address}>
             {tab === "deposit" ? "Wallet" : "Deposited"}: {address ? fmt(balance) : "—"} BOLD · Max
           </button>
         </div>
         <div className="mt-2 flex items-center gap-3">
           <input
             inputMode="decimal"
+            aria-label={`Amount of BOLD to ${tab}`}
             placeholder="0.00"
             value={input}
             onChange={(e) => {
@@ -176,40 +182,55 @@ export function DepositCard() {
               reset();
               if (/^\d*\.?\d*$/.test(e.target.value)) setInput(e.target.value);
             }}
-            className="w-full bg-transparent text-3xl font-semibold text-ink outline-none placeholder:text-muted/50"
+            className="w-full bg-transparent text-3xl font-medium text-navy outline-none placeholder:text-muted/60"
           />
-          <span className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-surface py-1.5 pl-1.5 pr-3 font-semibold">
+          <span className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-surface py-1.5 pl-1.5 pr-3 font-medium">
             <Image src="/bold.png" alt="BOLD" width={24} height={24} className="rounded-full" />
             BOLD
           </span>
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between px-1 text-xs text-muted">
-        <span>
-          {tab === "deposit"
-            ? "One transaction — starts earning immediately."
-            : "Withdraw anytime. No lockups, no exit fee."}
-        </span>
-        <Image src="/ybold.png" alt="yBOLD" width={18} height={18} className="rounded-full opacity-80" />
-      </div>
+      <dl className="mt-4 divide-y divide-line text-sm">
+        {apy7d !== undefined && (
+          <div className="flex items-center justify-between py-2.5">
+            <dt className="text-muted">7-day realized APY</dt>
+            <dd className="flex items-center gap-2 font-medium">
+              <span aria-hidden className="size-2 rounded-full bg-green" />
+              {(apy7d * 100).toFixed(1)}%
+            </dd>
+          </div>
+        )}
+        {tab === "deposit" && estYearly > 0 && (
+          <div className="flex items-center justify-between py-2.5">
+            <dt className="text-muted">Est. yearly earnings</dt>
+            <dd className="font-medium">
+              ~{estYearly.toLocaleString("en-US", { maximumFractionDigits: 2 })} BOLD
+            </dd>
+          </div>
+        )}
+        <div className="flex items-center justify-between py-2.5">
+          <dt className="text-muted">{tab === "deposit" ? "Earning starts" : "Lockup"}</dt>
+          <dd className="font-medium">{tab === "deposit" ? "Immediately, one transaction" : "None — withdraw anytime"}</dd>
+        </div>
+      </dl>
 
-      {overBalance && <p className="mt-3 text-sm text-bad">Amount exceeds your balance.</p>}
-      {error && <p className="mt-3 break-words text-sm text-bad">{error}</p>}
-      {success && <p className="mt-3 text-sm font-medium text-good">{success}</p>}
+      {overBalance && <p className="mt-2 text-sm text-bad">Amount exceeds your balance.</p>}
+      {error && <p className="mt-2 break-words text-sm text-bad">{error}</p>}
+      {success && <p className="mt-2 text-sm font-medium text-good">{success}</p>}
 
       {address ? (
         <button
           onClick={run}
           disabled={disabled}
-          className="mt-5 w-full rounded-full bg-lblue py-3.5 font-semibold text-white transition hover:bg-lblue-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 w-full rounded-full bg-yearn py-3.5 font-medium text-white transition hover:bg-electric disabled:cursor-not-allowed disabled:opacity-50"
         >
           {stage ?? (tab === "deposit" ? "Deposit BOLD" : "Withdraw BOLD")}
         </button>
       ) : (
         <button
           onClick={openConnectModal}
-          className="mt-5 w-full rounded-full bg-lblue py-3.5 font-semibold text-white transition hover:bg-lblue-dark"
+          className="mt-4 w-full rounded-full bg-yearn py-3.5 font-medium text-white transition hover:bg-electric"
         >
           Connect wallet
         </button>
@@ -217,7 +238,7 @@ export function DepositCard() {
 
       {address && positionBold > 0n && (
         <p className="mt-4 text-center text-sm text-muted">
-          Your position: <span className="font-semibold text-ink">{fmt(positionBold)} BOLD</span>
+          Your position: <span className="font-medium text-navy">{fmt(positionBold)} BOLD</span>
         </p>
       )}
     </div>
