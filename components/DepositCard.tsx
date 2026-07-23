@@ -10,6 +10,7 @@ import {
   useReadContracts,
   useWriteContract,
 } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { BOLD, ST_YBOLD, YBOLD_ZAPPER, zapperAbi } from "@/lib/contracts";
 
 const WAD = 10n ** 18n;
@@ -29,23 +30,24 @@ type Tab = "deposit" | "withdraw";
 export function DepositCard({ apy7d }: { apy7d?: number }) {
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId: mainnet.id });
   const { writeContractAsync } = useWriteContract();
 
   const [tab, setTab] = useState<Tab>("deposit");
   const [input, setInput] = useState("");
   const [maxed, setMaxed] = useState(false);
+  const [selectedPercent, setSelectedPercent] = useState<number | null>(null);
   const [stage, setStage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const reads = useReadContracts({
     contracts: [
-      { address: BOLD, abi: erc20Abi, functionName: "balanceOf", args: [address ?? "0x0000000000000000000000000000000000000000"] },
-      { address: ST_YBOLD, abi: erc20Abi, functionName: "balanceOf", args: [address ?? "0x0000000000000000000000000000000000000000"] },
-      { address: BOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", YBOLD_ZAPPER] },
-      { address: ST_YBOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", YBOLD_ZAPPER] },
-      { address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "previewRedeem", args: [WAD] },
+      { chainId: mainnet.id, address: BOLD, abi: erc20Abi, functionName: "balanceOf", args: [address ?? "0x0000000000000000000000000000000000000000"] },
+      { chainId: mainnet.id, address: ST_YBOLD, abi: erc20Abi, functionName: "balanceOf", args: [address ?? "0x0000000000000000000000000000000000000000"] },
+      { chainId: mainnet.id, address: BOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", YBOLD_ZAPPER] },
+      { chainId: mainnet.id, address: ST_YBOLD, abi: erc20Abi, functionName: "allowance", args: [address ?? "0x0000000000000000000000000000000000000000", YBOLD_ZAPPER] },
+      { chainId: mainnet.id, address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "previewRedeem", args: [WAD] },
     ],
     query: { enabled: !!address, refetchInterval: 15_000 },
   });
@@ -59,6 +61,13 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
   ] = (reads.data ?? []).map((r) =>
     r.status === "success" ? (r.result as bigint) : 0n,
   );
+  const ysyBoldBalanceResult = reads.data?.[1];
+  const positionQuoteResult = reads.data?.[4];
+  const positionLoading = !!address && reads.isPending;
+  const positionUnavailable =
+    !!address &&
+    !positionLoading &&
+    (!ysyBoldBalanceResult || ysyBoldBalanceResult.status === "failure");
 
   // BOLD value of the staked position, quoted by the zapper itself.
   const positionBold = (stBal * (sharePriceBold || WAD)) / WAD;
@@ -83,10 +92,11 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
     setSuccess(null);
   }
 
-  function setMax() {
+  function setPercentage(percent: number) {
     reset();
-    setMaxed(true);
-    setInput(formatUnits(balance, 18));
+    setMaxed(percent === 100);
+    setSelectedPercent(percent);
+    setInput(formatUnits((balance * BigInt(percent)) / 100n, 18));
   }
 
   async function run() {
@@ -98,16 +108,16 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
         if (needsApproval) {
           setStage("Approving BOLD… (1/2)");
           const h = await writeContractAsync({
-            address: BOLD, abi: erc20Abi, functionName: "approve", args: [YBOLD_ZAPPER, amount],
+            chainId: mainnet.id, address: BOLD, abi: erc20Abi, functionName: "approve", args: [YBOLD_ZAPPER, amount],
           });
           await publicClient.waitForTransactionReceipt({ hash: h });
         }
         setStage(needsApproval ? "Depositing… (2/2)" : "Depositing…");
         const h = await writeContractAsync({
-          address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "zapIn", args: [amount, address],
+          chainId: mainnet.id, address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "zapIn", args: [amount, address],
         });
         await publicClient.waitForTransactionReceipt({ hash: h });
-        setSuccess("Deposit complete — your BOLD is earning.");
+        setSuccess("Deposit complete. Your ysyBOLD is in your wallet.");
       } else {
         const shares = maxed
           ? stBal
@@ -117,19 +127,20 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
         if (needsApproval) {
           setStage("Approving withdrawal… (1/2)");
           const h = await writeContractAsync({
-            address: ST_YBOLD, abi: erc20Abi, functionName: "approve", args: [YBOLD_ZAPPER, clamped],
+            chainId: mainnet.id, address: ST_YBOLD, abi: erc20Abi, functionName: "approve", args: [YBOLD_ZAPPER, clamped],
           });
           await publicClient.waitForTransactionReceipt({ hash: h });
         }
         setStage(needsApproval ? "Withdrawing… (2/2)" : "Withdrawing…");
         const h = await writeContractAsync({
-          address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "zapOut", args: [clamped, address, MAX_LOSS_BPS],
+          chainId: mainnet.id, address: YBOLD_ZAPPER, abi: zapperAbi, functionName: "zapOut", args: [clamped, address, MAX_LOSS_BPS],
         });
         await publicClient.waitForTransactionReceipt({ hash: h });
-        setSuccess("Withdrawal complete — BOLD is back in your wallet.");
+        setSuccess("Withdrawal complete. BOLD is back in your wallet.");
       }
       setInput("");
       setMaxed(false);
+      setSelectedPercent(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg.includes("User rejected") ? "Transaction rejected." : msg.split("\n")[0]);
@@ -142,8 +153,8 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
   const disabled = busy || (!!address && (amount === 0n || overBalance));
 
   return (
-    <div className="w-full max-w-md rounded-lg border border-line bg-surface p-6">
-      <div className="mb-5 flex rounded-full bg-background p-1" role="tablist">
+    <div className="mx-auto w-full max-w-md rounded-lg border border-line bg-surface p-6 min-[900px]:mx-0">
+      <div className="mb-5 flex rounded-full border border-line bg-background p-1" role="tablist">
         {(["deposit", "withdraw"] as const).map((t) => (
           <button
             key={t}
@@ -153,6 +164,7 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
               setTab(t);
               setInput("");
               setMaxed(false);
+              setSelectedPercent(null);
               reset();
             }}
             className={`flex-1 rounded-full px-4 py-2 text-sm font-medium capitalize transition ${
@@ -164,34 +176,84 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
         ))}
       </div>
 
-      <div className="rounded-md bg-background p-4">
-        <div className="flex items-center justify-between text-sm text-muted">
-          <span>{tab === "deposit" ? "You deposit" : "You withdraw"}</span>
-          <button onClick={setMax} className="font-medium text-yearn hover:text-electric" disabled={!address}>
-            {tab === "deposit" ? "Wallet" : "Deposited"}: {address ? fmt(balance) : "—"} BOLD · Max
-          </button>
+      <div className="rounded-md border border-line bg-background p-4">
+        <div className="flex items-center justify-between gap-4 text-sm text-muted">
+          <span>Amount</span>
+          <div className="flex gap-1" aria-label="Choose percentage of available balance">
+            {[25, 50, 75, 100].map((percent) => (
+              <button
+                key={percent}
+                type="button"
+                aria-pressed={selectedPercent === percent}
+                onClick={() => setPercentage(percent)}
+                disabled={!address || balance === 0n}
+                className={`rounded border px-2 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                  selectedPercent === percent
+                    ? "border-yearn bg-surface text-yearn"
+                    : "border-line bg-surface text-muted hover:text-navy"
+                }`}
+              >
+                {percent === 100 ? "Max" : `${percent}%`}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="mt-2 flex items-center gap-3">
-          <input
-            inputMode="decimal"
-            aria-label={`Amount of BOLD to ${tab}`}
-            placeholder="0.00"
-            value={input}
-            onChange={(e) => {
-              setMaxed(false);
-              reset();
-              if (/^\d*\.?\d*$/.test(e.target.value)) setInput(e.target.value);
-            }}
-            className="w-full bg-transparent text-3xl font-medium text-navy outline-none placeholder:text-muted/60"
-          />
-          <span className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-surface py-1.5 pl-1.5 pr-3 font-medium">
-            <Image src="/bold.png" alt="BOLD" width={24} height={24} className="rounded-full" />
-            BOLD
-          </span>
+        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+          <div className="min-w-0">
+            <input
+              inputMode="decimal"
+              aria-label={`Amount of BOLD to ${tab}`}
+              placeholder="0.00"
+              value={input}
+              onChange={(e) => {
+                setMaxed(false);
+                setSelectedPercent(null);
+                reset();
+                if (/^\d*\.?\d*$/.test(e.target.value)) setInput(e.target.value);
+              }}
+              className="w-full bg-transparent text-3xl font-medium text-navy outline-none placeholder:text-muted/60"
+            />
+            <p className="mt-2 text-sm text-muted">
+              ≈ ${inputNum.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface py-1.5 pl-1.5 pr-3 font-medium">
+              <Image src="/bold.png" alt="BOLD" width={24} height={24} className="rounded-full" />
+              BOLD
+            </span>
+            <p className="mt-2 whitespace-nowrap text-xs text-muted">
+              Balance: {address ? fmt(balance) : "—"} BOLD
+            </p>
+          </div>
         </div>
       </div>
 
       <dl className="mt-4 divide-y divide-line text-sm">
+        {address && (
+          <div className="flex items-start justify-between gap-6 py-2.5">
+            <dt className="text-muted">Your position</dt>
+            <dd className="text-right">
+              {positionLoading ? (
+                <span className="text-muted">Loading...</span>
+              ) : positionUnavailable ? (
+                <span className="text-bad">Unavailable</span>
+              ) : (
+                <>
+                  <span className="block font-medium">{fmt(stBal, 4)} ysyBOLD</span>
+                  {positionQuoteResult?.status === "success" && (
+                    <span className="block text-xs text-muted">
+                      ≈ {fmt(positionBold)} BOLD
+                    </span>
+                  )}
+                </>
+              )}
+            </dd>
+          </div>
+        )}
         {apy7d !== undefined && (
           <div className="flex items-center justify-between py-2.5">
             <dt className="text-muted">7-day realized APY</dt>
@@ -201,18 +263,26 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
             </dd>
           </div>
         )}
+        <div className="flex items-center justify-between py-2.5">
+          <dt className="text-muted">Lockup</dt>
+          <dd className="font-medium">None</dd>
+        </div>
+        <div className="flex items-center justify-between py-2.5">
+          <dt className="text-muted">Deposit Fees</dt>
+          <dd className="font-medium">None</dd>
+        </div>
+        <div className="flex items-center justify-between py-2.5">
+          <dt className="text-muted">Performance Fee</dt>
+          <dd className="font-medium">10%</dd>
+        </div>
         {tab === "deposit" && estYearly > 0 && (
           <div className="flex items-center justify-between py-2.5">
             <dt className="text-muted">Est. yearly earnings</dt>
             <dd className="font-medium">
-              ~{estYearly.toLocaleString("en-US", { maximumFractionDigits: 2 })} BOLD
+              {estYearly.toLocaleString("en-US", { maximumFractionDigits: 2 })} BOLD
             </dd>
           </div>
         )}
-        <div className="flex items-center justify-between py-2.5">
-          <dt className="text-muted">{tab === "deposit" ? "Earning starts" : "Lockup"}</dt>
-          <dd className="font-medium">{tab === "deposit" ? "Immediately, one transaction" : "None — withdraw anytime"}</dd>
-        </div>
       </dl>
 
       {overBalance && <p className="mt-2 text-sm text-bad">Amount exceeds your balance.</p>}
@@ -236,11 +306,6 @@ export function DepositCard({ apy7d }: { apy7d?: number }) {
         </button>
       )}
 
-      {address && positionBold > 0n && (
-        <p className="mt-4 text-center text-sm text-muted">
-          Your position: <span className="font-medium text-navy">{fmt(positionBold)} BOLD</span>
-        </p>
-      )}
     </div>
   );
 }
