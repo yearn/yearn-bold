@@ -1,10 +1,96 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useDisconnect } from "wagmi";
 import { YEARN_VAULT_URL } from "@/lib/contracts";
 
+function WalletIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden className="size-4">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M16.583 11.09c-1.518 0-2.75 1.223-2.75 2.728 0 1.506 1.232 2.728 2.75 2.728 1.519 0 2.75-1.222 2.75-2.728 0-1.505-1.231-2.727-2.75-2.727Zm-.916 2.728c0-.501.41-.909.916-.909s.917.408.917.91c0 .5-.41.908-.917.908a.914.914 0 0 1-.916-.909Z"
+        fill="currentColor"
+      />
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M2.833 4.727c0-.501.411-.909.917-.909h16.5a.913.913 0 0 0 .917-.909c0-.502-.41-.909-.917-.909H3.75C2.232 2 1 3.222 1 4.727v12.727C1 19.965 3.052 22 5.583 22H20.25c1.518 0 2.75-1.222 2.75-2.727V8.363c0-1.505-1.232-2.727-2.75-2.727H3.75a.914.914 0 0 1-.917-.909Zm0 12.727V7.3c.287.1.596.156.917.156h16.5c.506 0 .917.407.917.909v10.909c0 .501-.411.909-.917.909H5.583c-1.518 0-2.75-1.221-2.75-2.727Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden className="size-3.5">
+      <path
+        d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1Zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2Zm0 16H8V7h11v14Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function PowerIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="size-4"
+    >
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <path d="M12 2v10" />
+    </svg>
+  );
+}
+
 export function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const { disconnect } = useDisconnect();
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
+
+  async function copyAddress(address: string) {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 sm:px-6">
       <Image src="/yearn-logo.svg" alt="Yearn" width={110} height={30} />
@@ -30,7 +116,122 @@ export function Header() {
             <path d="M21.3211 2.08347C21.4545 2.13878 21.5747 2.21959 21.6755 2.31981C21.5706 2.21552 21.4499 2.13674 21.3211 2.08347Z" fill="currentColor" />
           </svg>
         </a>
-        <ConnectButton showBalance={false} chainStatus="icon" accountStatus="address" />
+        <div ref={menuRef} className="relative">
+          <ConnectButton.Custom>
+            {({
+              account,
+              authenticationStatus,
+              chain,
+              mounted,
+              openChainModal,
+              openConnectModal,
+            }) => {
+              const ready = mounted && authenticationStatus !== "loading";
+              const connected =
+                ready &&
+                account &&
+                chain &&
+                (!authenticationStatus ||
+                  authenticationStatus === "authenticated");
+
+              return (
+                <div
+                  {...(!ready && {
+                    "aria-hidden": true,
+                    style: {
+                      opacity: 0,
+                      pointerEvents: "none",
+                      userSelect: "none",
+                    },
+                  })}
+                >
+                  {!connected ? (
+                    <button
+                      type="button"
+                      onClick={openConnectModal}
+                      className="flex h-10 items-center gap-2 rounded-lg bg-yearn px-3 text-sm font-medium text-white transition hover:bg-electric"
+                    >
+                      <WalletIcon />
+                      Connect wallet
+                    </button>
+                  ) : chain.unsupported ? (
+                    <button
+                      type="button"
+                      onClick={openChainModal}
+                      className="flex h-10 items-center gap-2 rounded-lg bg-yearn px-3 text-sm font-medium text-white transition hover:bg-electric"
+                    >
+                      <WalletIcon />
+                      Switch network
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setMenuOpen((open) => !open)}
+                        aria-expanded={menuOpen}
+                        aria-haspopup="dialog"
+                        className="flex h-10 items-center gap-2 rounded-lg bg-yearn px-3 text-sm font-medium text-white transition hover:bg-electric"
+                      >
+                        <WalletIcon />
+                        {account.displayName}
+                      </button>
+
+                      {menuOpen && (
+                        <div
+                          role="dialog"
+                          aria-label="Connected wallet"
+                          className="absolute right-0 z-50 mt-3 w-[min(20rem,calc(100vw-2.5rem))] rounded-lg border border-line bg-surface p-4 shadow-[0_16px_40px_rgba(17,27,77,0.12)]"
+                        >
+                          <div className="rounded-lg bg-surface p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => copyAddress(account.address)}
+                                  className="group flex items-center gap-1.5 text-sm font-medium text-navy transition hover:text-yearn"
+                                >
+                                  {copied ? "Address copied" : account.displayName}
+                                  <CopyIcon />
+                                </button>
+                                {account.displayBalance && (
+                                  <p className="mt-1 text-2xl font-medium text-navy">
+                                    {account.displayBalance}
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  disconnect();
+                                  setMenuOpen(false);
+                                }}
+                                aria-label="Disconnect wallet"
+                                title="Disconnect wallet"
+                                className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-surface hover:text-navy"
+                              >
+                                <PowerIcon />
+                              </button>
+                            </div>
+
+                            <a
+                              href="https://yearn.fi/portfolio"
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={() => setMenuOpen(false)}
+                              className="mt-5 flex w-full items-center justify-center rounded-lg border border-line bg-surface px-3 py-2.5 text-sm font-medium text-navy transition hover:border-navy/25"
+                            >
+                              View your Yearn portfolio →
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            }}
+          </ConnectButton.Custom>
+        </div>
       </nav>
     </header>
   );
