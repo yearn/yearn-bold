@@ -17,52 +17,41 @@ export default async function Home() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-5 sm:px-6">
         {/* Hero — asymmetric: product story left, deposit box right */}
-        <section className="grid items-start gap-12 py-12 min-[900px]:grid-cols-[1.15fr_minmax(0,26rem)] min-[900px]:py-20">
-          <div>
-            <div className="flex items-center gap-4">
+        <section className="grid items-center gap-12 pb-12 pt-6 min-[900px]:grid-cols-[1.15fr_minmax(0,26rem)] min-[900px]:pb-16 min-[900px]:pt-10">
+          <div className="text-center min-[900px]:text-left">
+            <div className="flex items-center justify-center gap-4 min-[900px]:justify-start">
               <Image src="/ybold.png" alt="" width={88} height={88} className="rounded-full" />
               <span className="text-5xl font-bold tracking-tight min-[900px]:text-6xl">yBOLD</span>
             </div>
-            <h1 className="mt-5 max-w-xl text-[40px] font-medium leading-[1.08] tracking-tight min-[900px]:text-[56px]">
+            <h1 className="mx-auto mt-5 max-w-xl text-[40px] font-medium leading-[1.08] tracking-tight min-[900px]:mx-0 min-[900px]:text-[56px]">
               Earn BOLD yield automatically across Liquity Stability Pools
             </h1>
-            <p className="mt-5 max-w-lg text-lg text-navy/75">
-              Deposit BOLD once. Yearn allocates it across the WETH, wstETH, and
-              rETH Stability Pools, harvests liquidation gains, and compounds
-              everything back into BOLD.
+            <p className="mx-auto mt-5 max-w-lg text-lg text-navy/75 min-[900px]:mx-0">
+              Yearn allocated your BOLD across WETH, wstETH, and rETH Stability
+              Pools, harvests liquidation gains, and compounds everything back
+              into BOLD.
             </p>
 
-            {/* Metrics — compact aligned rows with thin dividers */}
-            <div className="mt-10 max-w-lg rounded-lg border border-line bg-surface p-6">
+            {/* Metrics — focused snapshot of current yield and vault size */}
+            <div className="mx-auto mt-8 max-w-lg min-[900px]:mx-0">
               {stats ? (
-                <>
-                  <div className="flex items-center gap-2 text-sm text-muted">
-                    <span aria-hidden className="size-2 rounded-full bg-green" />
-                    7-day realized APY
+                <dl className="grid grid-cols-2 gap-6">
+                  <div>
+                    <dt className="flex items-center justify-center gap-2 text-sm text-muted min-[900px]:justify-start">
+                      <span aria-hidden className="size-2 rounded-full bg-green" />
+                      7-day realized APY
+                    </dt>
+                    <dd className="mt-1 text-4xl font-medium text-yearn sm:text-5xl">
+                      {pct(stats.apy7d, 1)}
+                    </dd>
                   </div>
-                  <div className="mt-1 text-5xl font-medium text-yearn">{pct(stats.apy7d, 1)}</div>
-                  <p className="mt-2 text-sm text-muted">
-                    Annualized from the last 7 days — recent results from
-                    borrower interest, Trove fees, and liquidation gains. Not a
-                    forecast.
-                  </p>
-                  <dl className="mt-5 divide-y divide-line text-sm">
-                    {(
-                      [
-                        ["30-day realized APY", pct(stats.apy30d, 1)],
-                        ["Actual 7-day return", pct(stats.ret7d)],
-                        ["APY since inception", pct(stats.apyInception, 1)],
-                        ["Total deposits", usd(stats.tvlUsd)],
-                        ["Fees", `${pct(stats.performanceFee, 0)} on earnings, nothing on deposits`],
-                      ] as const
-                    ).map(([label, value]) => (
-                      <div key={label} className="flex items-center justify-between py-2.5">
-                        <dt className="text-muted">{label}</dt>
-                        <dd className="font-medium">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </>
+                  <div>
+                    <dt className="text-sm text-muted">Total deposits</dt>
+                    <dd className="mt-1 text-4xl font-medium text-yearn sm:text-5xl">
+                      {usd(stats.tvlUsd)}
+                    </dd>
+                  </div>
+                </dl>
               ) : (
                 <p className="text-navy/75">
                   Live APY temporarily unavailable —{" "}
@@ -79,7 +68,7 @@ export default async function Home() {
         </section>
 
         {/* Geometric divider */}
-        <div aria-hidden className="flex items-end gap-2 py-2">
+        <div aria-hidden className="flex items-end justify-center gap-2 py-2">
           <div className="size-14 rounded-full bg-yearn" />
           <div className="h-7 w-14 self-end rounded-t-full bg-yellow" />
           <div className="size-14 rounded-md bg-green" />
@@ -124,8 +113,13 @@ export default async function Home() {
         {/* Comparison */}
         <section className="py-14">
           <h2 className="text-3xl font-medium tracking-tight">How yBOLD compares</h2>
+          <p className="mt-3 max-w-2xl text-lg text-navy/75">
+            yBOLD can flex allocation across the three Stability Pools as
+            opportunities change. sBOLD uses set weights, while native
+            depositors choose one pool.
+          </p>
           <div className="mt-8 overflow-x-auto rounded-lg border border-line bg-surface">
-            <table className="w-full min-w-[520px] text-left text-sm">
+            <table className="w-full min-w-[800px] text-left text-sm">
               <thead>
                 <tr className="border-b border-line text-muted">
                   <th className="px-6 py-4 font-normal"></th>
@@ -135,33 +129,76 @@ export default async function Home() {
                       yBOLD
                     </span>
                   </th>
-                  <th className="px-6 py-4 font-normal">Native Stability Pool</th>
+                  <th className="px-6 py-4 font-medium text-navy">sBOLD</th>
+                  <th className="px-6 py-4 font-medium text-navy">
+                    Native Stability Pool
+                  </th>
                 </tr>
               </thead>
               <tbody className="[&_td]:px-6 [&_td]:py-3.5">
                 <tr className="border-b border-line">
-                  <td className="text-muted">Pool allocation</td>
-                  <td className="font-medium">Automatic, across all three pools</td>
+                  <td className="text-muted">Allocation model</td>
+                  <td className="font-medium">Flexible across all three pools</td>
+                  <td className="text-navy/75">Set weights across all three pools</td>
                   <td className="text-navy/75">Manual, one pool at a time</td>
                 </tr>
                 <tr className="border-b border-line">
-                  <td className="text-muted">Liquidation collateral</td>
+                  <td className="text-muted">Liquidation gains</td>
                   <td className="font-medium">Auctioned back to BOLD for you</td>
-                  <td className="text-navy/75">You claim and sell it yourself</td>
+                  <td className="text-navy/75">Solver-swapped back to BOLD</td>
+                  <td className="text-navy/75">
+                    You claim and sell the collateral yourself
+                  </td>
                 </tr>
                 <tr className="border-b border-line">
                   <td className="text-muted">Compounding</td>
                   <td className="font-medium">Automatic</td>
+                  <td className="text-navy/75">Automatic</td>
                   <td className="text-navy/75">Manual</td>
                 </tr>
                 <tr>
                   <td className="text-muted">Fees</td>
-                  <td className="font-medium">10% on earnings only</td>
+                  <td className="font-medium">
+                    10% on earnings; no deposit or withdrawal fees
+                  </td>
+                  <td className="text-navy/75">
+                    Configurable entry fee, initially set to 0
+                  </td>
                   <td className="text-navy/75">None</td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <p className="mt-3 text-sm text-muted">
+            Product details:{" "}
+            <a
+              className="underline decoration-line underline-offset-4 transition hover:text-navy"
+              href={YEARN_VAULT_URL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Yearn vault
+            </a>
+            ,{" "}
+            <a
+              className="underline decoration-line underline-offset-4 transition hover:text-navy"
+              href="https://k3-capital.gitbook.io/sbold/introducing-sbold"
+              target="_blank"
+              rel="noreferrer"
+            >
+              K3 Capital documentation
+            </a>{" "}
+            and{" "}
+            <a
+              className="underline decoration-line underline-offset-4 transition hover:text-navy"
+              href="https://www.liquity.org/blog/sbold---the-on-chain-defi-savings-account"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Liquity&apos;s overview
+            </a>
+            .
+          </p>
         </section>
 
         {/* How it works — navy anchor panel with geometric accent */}
